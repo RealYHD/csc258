@@ -33,11 +33,11 @@
     roadColour: .word 0x00959696 # variable for colour of road areas; gray
     riverColour: .word 0x000098d4 # variable for the colour of river areas; blue
     endColour: .word 0x00e5ff00 # variable for colour of end area; yellow-green
-    vehicleColour: .word 0x00ff2e17 # variable for colour of vehicles; shade of red
+    carColour: .word 0x00ff2e17 # variable for colour of vehicles; shade of red
     logColour : .word 0x00663300 # variable for colour of logs; shade of brown
     
-    riverPosition: .byte 16
-    roadPosition: .byte 40
+    riverPosition: .byte 4
+    roadPosition: .byte 10
     
     # GAME STATE
     # We can use this to track what state the game is in.
@@ -55,12 +55,12 @@
     
     logLocations: .byte -1:48 # Track a total of 32 wood pieces at any given time. 3x16 guarantees there will always be a available log.
     logSS: .byte 1 # 1 in logSS chance of generating a log.
-    logLength: .byte -1 # The number of pieces that must be spawned consecutively.
+    logQueue: .byte -1 # The number of pieces that must be spawned consecutively.
     maxLogLength: .byte 2 # the maximum number of forced log spawns.
     
-    carLocations: .byte -1:48 # Track a total of 32 vehicles at any given time.
+    carLocations: .byte 4:48 # Track a total of 32 vehicles at any given time.
     carSS: .byte 1 # keep track of the next dead car.
-    carLength: .byte -1 # The number of pieces that must be spawned consecutively.
+    carQueue: .byte -1 # The number of pieces that must be spawned consecutively.
     maxCarLength: .byte 3 # the longest number of forced car spawns.
     
 
@@ -115,54 +115,204 @@
         add $t2, $zero, $a2 # undefined
         add $t3, $zero, $a3 # undefined
         
+        jal update_input_f
+        jal update_cars_f
+
+        
+        update_f_ret:
+        # Load previous temporaries and $ra. (FUNC FOOTER)
+        lw $t9, 0($sp)
+        addi $sp, $sp, 4
+        lw $t8, 0($sp)
+        addi $sp, $sp, 4
+        lw $t7, 0($sp)
+        addi $sp, $sp, 4
+        lw $t6, 0($sp)
+        addi $sp, $sp, 4
+        lw $t5, 0($sp)
+        addi $sp, $sp, 4
+        lw $t4, 0($sp)
+        addi $sp, $sp, 4
+        lw $t3, 0($sp)
+        addi $sp, $sp, 4
+        lw $t2, 0($sp)
+        addi $sp, $sp, 4
+        lw $t1, 0($sp)
+        addi $sp, $sp, 4
+        lw $t0, 0($sp)
+        addi $sp, $sp, 4
+        lw $ra, 0($sp)
+        addi $sp, $sp, 4
+        jr $ra # return to call position.
+        
+        
+    update_cars_f:
+        # Load everything onto stack. (FUNC HEADER)
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)
+        addi $sp, $sp, -4
+        sw $t1, 0($sp)
+        addi $sp, $sp, -4
+        sw $t2, 0($sp)
+        addi $sp, $sp, -4
+        sw $t3, 0($sp)
+        addi $sp, $sp, -4
+        sw $t4, 0($sp)
+        addi $sp, $sp, -4
+        sw $t5, 0($sp)
+        addi $sp, $sp, -4
+        sw $t6, 0($sp)
+        addi $sp, $sp, -4
+        sw $t7, 0($sp)
+        addi $sp, $sp, -4
+        sw $t8, 0($sp)
+        addi $sp, $sp, -4
+        sw $t9, 0($sp)
+        add $t0, $zero, $a0 # Load parameters into temporaries.
+        add $t1, $zero, $a1
+        add $t2, $zero, $a2
+        add $t3, $zero, $a3
+        
+        la $t9, carLocations
+        li $t8, -1 # direction
+        
+        
+        li $t0, 0 # the index if the cars
+        li $t1, 0
+        update_cars_f_car_loop:
+            li $t2, 48 # iterate over all 48 car slots
+            bge $t0, $t2, update_cars_f_car_loop_done
+        
+            add $t2, $t0, $t9 # = memory location of current car
+            lb $t3, 0($t2) # = value of current car
+            beq $t3, -1, update_cars_f_car_loop_next # don't update if disabled.
+            add $t3, $t3, $t8 # ++ direction
+            sb $t3 0($t2)
+
+            update_cars_f_car_loop_next:
+            addi $t1, $t1, 1 # t1++
+            beq $t1, 16, update_cars_f_car_loop_row # if this is the 16th, then it's a new row.
+            j update_cars_f_car_loop_row_done
+            update_cars_f_car_loop_row:
+                li $t1, 0 # reset the row counter.
+                li $t2, -1 # flip the direction for the next row.
+                mult $t8, $t2 # ...
+                mflo $t8 # ...
+            update_cars_f_car_loop_row_done:
+            
+            bge $t3, 16, update_cars_f_car_loop_kill # kill if position is >= 16
+            bltz $t3, update_cars_f_car_loop_kill # kill if position is < 0
+            j update_cars_f_car_loop_kill_done
+            update_cars_f_car_loop_kill:
+                add $t2, $t0, $t9 # = memory location of current car
+                li $t3, -1 # kill value
+                sb $t3, 0($t2) # = value of current car
+            update_cars_f_car_loop_kill_done:
+                addi $t0, $t0, 1
+                j update_cars_f_car_loop
+        update_cars_f_car_loop_done:
+        # Load previous temporaries and $ra. (FUNC FOOTER)
+        lw $t9, 0($sp)
+        addi $sp, $sp, 4
+        lw $t8, 0($sp)
+        addi $sp, $sp, 4
+        lw $t7, 0($sp)
+        addi $sp, $sp, 4
+        lw $t6, 0($sp)
+        addi $sp, $sp, 4
+        lw $t5, 0($sp)
+        addi $sp, $sp, 4
+        lw $t4, 0($sp)
+        addi $sp, $sp, 4
+        lw $t3, 0($sp)
+        addi $sp, $sp, 4
+        lw $t2, 0($sp)
+        addi $sp, $sp, 4
+        lw $t1, 0($sp)
+        addi $sp, $sp, 4
+        lw $t0, 0($sp)
+        addi $sp, $sp, 4
+        lw $ra, 0($sp)
+        addi $sp, $sp, 4
+        jr $ra # return to call position.
+
+    
+    update_input_f:
+        # Load everything onto stack. (FUNC HEADER)
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)
+        addi $sp, $sp, -4
+        sw $t1, 0($sp)
+        addi $sp, $sp, -4
+        sw $t2, 0($sp)
+        addi $sp, $sp, -4
+        sw $t3, 0($sp)
+        addi $sp, $sp, -4
+        sw $t4, 0($sp)
+        addi $sp, $sp, -4
+        sw $t5, 0($sp)
+        addi $sp, $sp, -4
+        sw $t6, 0($sp)
+        addi $sp, $sp, -4
+        sw $t7, 0($sp)
+        addi $sp, $sp, -4
+        sw $t8, 0($sp)
+        addi $sp, $sp, -4
+        sw $t9, 0($sp)
+        add $t0, $zero, $a0 # Load parameters into temporaries.
+        add $t1, $zero, $a1
+        add $t2, $zero, $a2
+        add $t3, $zero, $a3
         
         # keyboard input
         lw $t0, 0xffff0000 # pressed
         lw $t1, 0xffff0004 # value
-        bnez $t0, update_f_key_input
+        bnez $t0, update_input_f_key_input
         j update_f_ret
         
-        update_f_key_input:
+        update_input_f_key_input:
             lb $t2, frogX
             lb $t3, frogY
             lb $t4, frogDirection
             li $t5, 15
             
-            beq $t1, 0x00000077, update_f_key_input_w
-            beq $t1, 0x00000061, update_f_key_input_a
-            beq $t1, 0x00000073, update_f_key_input_s
-            beq $t1, 0x00000064, update_f_key_input_d
-            j update_f_key_input_end
+            beq $t1, 0x00000077, update_input_f_key_input_w
+            beq $t1, 0x00000061, update_input_f_key_input_a
+            beq $t1, 0x00000073, update_input_f_key_input_s
+            beq $t1, 0x00000064, update_input_f_key_input_d
+            j update_input_f_key_input_end
             
-            update_f_key_input_w:
-                blez $t3, update_f_key_input_end
+            update_input_f_key_input_w:
+                blez $t3, update_input_f_key_input_end
                 addi $t3, $t3, -1
                 addi $t4, $zero, 1
-                j update_f_key_input_done
-            update_f_key_input_a:
-                blez $t2, update_f_key_input_end
+                j update_input_f_key_input_done
+            update_input_f_key_input_a:
+                blez $t2, update_input_f_key_input_end
                 addi $t2, $t2, -1
                 addi $t4, $zero, 0
-                j update_f_key_input_done
-            update_f_key_input_s:
-                bge $t3, $t5, update_f_key_input_end
+                j update_input_f_key_input_done
+            update_input_f_key_input_s:
+                bge $t3, $t5, update_input_f_key_input_end
                 addi $t3, $t3, 1
                 addi $t4, $zero, 3
-                j update_f_key_input_done
-            update_f_key_input_d:
-                bge $t2, $t5, update_f_key_input_end
+                j update_input_f_key_input_done
+            update_input_f_key_input_d:
+                bge $t2, $t5, update_input_f_key_input_end
                 addi $t2, $t2, 1
                 addi $t4, $zero, 2
-                j update_f_key_input_done
-            j update_f_key_input_end
-            update_f_key_input_done:
+                j update_input_f_key_input_done
+            j update_input_f_key_input_end
+            update_input_f_key_input_done:
                 sb $t2, frogX
                 sb $t3, frogY
                 sb $t4, frogDirection
-        update_f_key_input_end:
-
+        update_input_f_key_input_end:
         
-        update_f_ret:
         # Load previous temporaries and $ra. (FUNC FOOTER)
         lw $t9, 0($sp)
         addi $sp, $sp, 4
@@ -241,6 +391,7 @@
         sw $t0, draw_colour
         li $a0, 0
     	lb $a1, roadPosition
+    	sll $a1, $a1, 2
         li $a2, 64
     	li $a3, 12 # 3*4
     	jal draw_rect_f
@@ -250,9 +401,68 @@
         sw $t0, draw_colour
         li $a0, 0
     	lb $a1, riverPosition
+    	sll $a1, $a1, 2
         li $a2, 64
     	li $a3, 12 # 3*4
     	jal draw_rect_f
+    	
+        # draw platforms
+    	la $t9, carLocations
+    	la $t8, logLocations
+    	lb $t7, roadPosition
+    	lb $t6, riverPosition
+    	li $t0, 0 # the row
+    	render_f_row_loop:
+    	    li $t2, 3 # max number of rows
+    	    bge $t0, $t2, render_f_row_loop_e
+    	    li $t1, 0 # the entity itself
+    	    render_f_piece_loop:
+        	li $t2, 16 # number of pieces
+    	        bge $t1, $t2, render_f_piece_loop_e
+    	        
+    	        mult $t0, $t2 # (row * 16)
+    	        mflo $t2 # t2 = row * 16
+    	        add $t3, $t2, $t1 # t3 = row * 16 + t1
+    	        
+    	        # Cars
+    	        
+    	        render_f_piece_loop_cars:
+    	        add $t2, $t3, $t9 # t2 is now the memory location for the car.
+    	        lb $t2, 0($t2) # $t2 is now the x position for the car.
+    	        bltz $t2, render_f_piece_loop_cars_done # if it's outside of the boundary, don't render it.
+    	        sll $t2, $t2, 2 # to pixel units.
+    	        add $a0, $t2, $zero # x is t2
+    	        add $t2, $t0, $t7 # t2 is now the y position from the top left of the road.
+    	        sll $t2, $t2, 2 # to pixel units.
+    	        add $a1, $t2, $zero # y is t2
+    	        addi $a2, $zero, 4 # one world unit.
+    	        addi $a3, $zero, 4 # one world unit.
+    	        lw $t2, carColour
+    	        sw $t2, draw_colour
+    	        jal draw_rect_f
+    	        render_f_piece_loop_cars_done:
+    	        
+    	        # Logs
+    	        render_f_piece_loop_logs:
+    	        add $t2, $t3, $t8 # t2 is now the mem location of the specific log
+    	        lb $t2, 0($t2) # t2 is now the x position for the log
+                bltz $t2, render_f_piece_loop_logs_done # if it's outside of the boundary, don't render it.
+                sll $t2, $t2, 2 # to pixel units.
+    	        add $a0, $zero, $t2 # x is t2
+    	        add $t2, $t0, $t6 # t2 is now the y position of the river.
+    	        sll $t2, $t2, 2 # t2 is now road position in pixel units.
+    	        add  $a1, $t2, $zero # y is t2, width and height already set to desireable values.
+    	        lw $t2, logColour
+    	        sw $t2, draw_colour
+    	        jal draw_rect_f
+    	        render_f_piece_loop_logs_done:
+    	        
+    	        addi $t1, $t1, 1
+    	        j render_f_piece_loop
+    	    render_f_piece_loop_e:
+    	    addi $t0, $t0, 1
+    	    j render_f_row_loop
+    	render_f_row_loop_e:
 
         # draw the frog with entity data
         lb $a0, frogX
