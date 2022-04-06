@@ -92,15 +92,11 @@
    	    lb $t4, state
     	    bltz $t4, game_loop_e
     	    
-    	    li $a0, 3
-    	    li $a1, 3
-    	    li $a2, 4
-    	    li $a3, 4
-    	    sb $a0, draw_x
-    	    sb $a1, draw_y
-    	    lw $t0, frogColour
-    	    sw $t0, draw_colour
-    	    jal draw_rect
+    	    li $a0, 1
+    	    li $a1, 1
+    	    li $a2, 3
+    	    li $a3, 0
+    	    jal draw_frog
     	    
     	    jal draw_frame # call draw frame
         j game_loop # jump to start of game loop.
@@ -384,14 +380,100 @@
         sw $t8, 0($sp)
         addi $sp, $sp, -4
         sw $t9, 0($sp)
-        add $t0, $zero, $a0 # Load parameters into temporaries.
-        add $t1, $zero, $a1
-        add $t2, $zero, $a2
-        add $t3, $zero, $a3
+        add $t0, $zero, $a0 # Load parameters into temporaries. # top left x
+        add $t1, $zero, $a1 # top left position y
+        add $t2, $zero, $a2 # rotation
+        add $t3, $zero, $a3 # undefined
         
+        lw $t9, frogColour
+        sw $t9, draw_colour
         
+        sb $t0, draw_x # top left corner
+        sb $t1, draw_y
+        jal draw_pixel
+            
+        addi $t9, $t0, 3 # top right corner
+        sb $t9, draw_x
+        jal draw_pixel
         
-                # Load previous temporaries and $ra. (FUNC FOOTER)
+        addi $t9, $t1, 3 # bottom right corner
+        sb $t9, draw_y
+        jal draw_pixel
+        
+        sb $t0, draw_x # bottom left corner
+        jal draw_pixel
+        
+        beq $t2, 0, draw_frog_left
+        beq $t2, 1, draw_frog_up
+        beq $t2, 2, draw_frog_right
+        beq $t2, 3, draw_frog_down
+        
+        draw_frog_left:
+            
+            addi $t9, $t0, 1 # bottom left +1 to right
+            sb $t9, draw_x
+            jal draw_pixel
+            
+            sb $t1, draw_y # top left +1 to right
+            jal draw_pixel
+            
+            addi $a0, $t0, 1 # x
+            addi $a1, $t1, 1 # y
+            li $a2, 3 # width
+            li $a3, 2 # height
+            jal draw_rect
+            
+            j draw_frog_ret
+            
+        draw_frog_up:
+            addi $t9, $t1, 1 # top left +1 down
+            sb $t9, draw_y
+            jal draw_pixel
+            
+            addi $t9, $t0, 3
+            sb $t9, draw_x # top right +1 down
+            jal draw_pixel
+            
+            addi $a0, $t0, 1 # x
+            addi $a1, $t1, 1 # y
+            li $a2, 2 # width
+            li $a3, 3 # height
+            jal draw_rect
+            
+            j draw_frog_ret
+        draw_frog_right:
+            addi $t9, $t0, 2 # bottom right +1 to left
+            sb $t9, draw_x
+            jal draw_pixel
+            
+            sb $t1, draw_y # top right +1 to left
+            jal draw_pixel
+            
+            addi $a0, $t0, 0 # x
+            addi $a1, $t1, 1 # y
+            li $a2, 3 # width
+            li $a3, 2 # height
+            jal draw_rect
+            
+            j draw_frog_ret
+        draw_frog_down:
+            addi $t9, $t1, 2 # bottom left +1 up
+            sb $t9, draw_y
+            jal draw_pixel
+            
+            addi $t9, $t0, 3
+            sb $t9, draw_x # bottom right +1 up
+            jal draw_pixel
+            
+            addi $a0, $t0, 1 # x
+            addi $a1, $t1, 0 # y
+            li $a2, 2 # width
+            li $a3, 3 # height
+            jal draw_rect
+            
+            j draw_frog_ret
+        
+        draw_frog_ret: # Load previous temporaries and $ra. (FUNC FOOTER)
         lw $t9, 0($sp)
         addi $sp, $sp, 4
         lw $t8, 0($sp)
