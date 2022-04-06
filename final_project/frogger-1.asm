@@ -110,7 +110,7 @@
             lb $t2, frogX
             lb $t3, frogY
             lb $t4, frogDirection
-            li $t5, 64
+            li $t5, 15
             
             beq $t1, 0x00000077, update_f_key_input_w
             beq $t1, 0x00000061, update_f_key_input_a
@@ -119,12 +119,12 @@
             j update_f_key_input_end
             
             update_f_key_input_w:
-                blt $t3, $zero, update_f_key_input_end
+                blez $t3, update_f_key_input_end
                 addi $t3, $t3, -1
                 addi $t4, $zero, 1
                 j update_f_key_input_done
             update_f_key_input_a:
-                blt $t2, $zero, update_f_key_input_end
+                blez $t2, update_f_key_input_end
                 addi $t2, $t2, -1
                 addi $t4, $zero, 0
                 j update_f_key_input_done
