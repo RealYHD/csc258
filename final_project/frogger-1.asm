@@ -27,7 +27,7 @@
 
 .data
     # TODO: perhaps look into any form of constants or pre-processing? These values technically don't change. May change for future levels?
-    # GAME ENV. VARIABLES
+    # GAME CONF. VARIABLES
     frogColour: .word 0x0042f557 # variable for the colour of the frog; light green # first 4 bytes ignored? starts interpretting from right?
     landColour: .word 0x00084d10 # variable for colour of land areas; dark green
     roadColour: .word 0x00959696 # variable for colour of road areas; gray
@@ -36,18 +36,34 @@
     vehicleColour: .word 0x00ff2e17 # variable for colour of vehicles; shade of red
     logColour : .word 0x00663300 # variable for colour of logs; shade of brown
     
+    riverPosition: .byte 16
+    roadPosition: .byte 40
+    
     # GAME STATE
     # We can use this to track what state the game is in.
     # -1 will be exit state.
     # 0 will be designated the running state.
     # 1 will be designated the win state.
     state: .byte 0 # state tracker.
+    lives: .byte 0 # number of lives
+    difficulty: .byte 0 # for scaling RNG values.
     
     # ENTITY VARIABLES
     frogX: .byte 7 # start frog x position at 0 # byte for 127 to -128 values and display is technically 32 virtual pixels wide;
     frogY: .byte 15 # start frog y position at 0
     frogDirection: .byte 1 # start frog direction up.
     
+    logLocations: .byte -1:48 # Track a total of 32 wood pieces at any given time. 3x16 guarantees there will always be a available log.
+    logSS: .byte 1 # 1 in logSS chance of generating a log.
+    logLength: .byte -1 # The number of pieces that must be spawned consecutively.
+    maxLogLength: .byte 2 # the maximum number of forced log spawns.
+    
+    carLocations: .byte -1:48 # Track a total of 32 vehicles at any given time.
+    carSS: .byte 1 # keep track of the next dead car.
+    carLength: .byte -1 # The number of pieces that must be spawned consecutively.
+    maxCarLength: .byte 3 # the longest number of forced car spawns.
+    
+
     framebuffer: .word 0:4096 # 64 * 64
     
     # DRAW STATE
@@ -210,7 +226,34 @@
     	li $a3, 64
         sw $t0, draw_colour
     	jal draw_rect_f
-        
+
+        # draw land
+        lw $t0, landColour    	    
+        li $a0, 0
+    	li $a1, 0
+        li $a2, 64
+    	li $a3, 64
+        sw $t0, draw_colour
+    	jal draw_rect_f
+    	
+    	# draw road
+    	lw $t0, roadColour
+        sw $t0, draw_colour
+        li $a0, 0
+    	lb $a1, roadPosition
+        li $a2, 64
+    	li $a3, 12 # 3*4
+    	jal draw_rect_f
+    	
+    	# draw river
+    	lw $t0, riverColour
+        sw $t0, draw_colour
+        li $a0, 0
+    	lb $a1, riverPosition
+        li $a2, 64
+    	li $a3, 12 # 3*4
+    	jal draw_rect_f
+
         # draw the frog with entity data
         lb $a0, frogX
         sll $a0, $a0, 2 # x4 to convert from world unit to pixels.
