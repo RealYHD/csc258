@@ -58,7 +58,7 @@
     draw_x: .byte 0
     draw_y: .byte 0
 .text
-    main:
+    main: # MAIN FUNCTION
         # Load everything onto stack. (FUNC HEADER)
     	addi $sp, $sp, -4
     	sw $ra, 0($sp)
@@ -95,9 +95,17 @@
     	    li $a1, 0
     	    li $a2, 64
     	    li $a3, 64
-    	    jal draw_rect
+    	    li $t0, 0x00ffffff
+    	    sw $t0, draw_colour
+    	    jal draw_rect_f
     	    
-    	    jal draw_frame # call draw frame
+    	    li $a0, 3
+    	    li $a1, 3
+    	    li $a2, 1
+    	    li $a3, 0
+    	    jal draw_frog_sprite_f
+    	    
+    	    jal draw_frame_f # call draw frame
         j game_loop # jump to start of game loop.
         
         
@@ -132,7 +140,7 @@
         jr $ra # return to call position.
         li $v0, 10 # exits the program.
     
-    draw_frame:
+    draw_frame_f:
         # Draws the current framebuffer.
         # Load everything onto stack. (FUNC HEADER)
         addi $sp, $sp, -4
@@ -205,7 +213,7 @@
             
     
     # functions
-    draw_pixel:  # $a0 = x, $a1 = y
+    draw_pixel_f:  # $a0 = x, $a1 = y
         # Load everything onto stack. (FUNC HEADER)
     	addi $sp, $sp, -4
     	sw $ra, 0($sp)
@@ -275,7 +283,7 @@
         addi $sp, $sp, 4
         jr $ra # return to call position.
     
-    draw_rect: # $a0 = width $a1 = height
+    draw_rect_f: # $a0 = width $a1 = height
         # Load everything onto stack. (FUNC HEADER)
     	addi $sp, $sp, -4
     	sw $ra, 0($sp)
@@ -309,48 +317,49 @@
     	
     	# work
     	add $t5, $zero, $t1
-    	draw_rect_y: # WHILE LOOP BEGIN
+    	draw_rect_f_y: # WHILE LOOP BEGIN
     	    add $t6, $t3, $t1 # t6 = height + initial y
-    	    bge $t5, $t6 draw_rect_y_e 
+    	    bge $t5, $t6 draw_rect_f_y_e 
     	    add $t4, $zero, $t0 # the current position
-    	    draw_rect_x: # WHILE LOOP BEGIN
+    	    draw_rect_f_x: # WHILE LOOP BEGIN
     	        add $t6, $t2, $t0 # t6 = width + initial x
-    	        bge $t4, $t6, draw_rect_x_e 
+    	        bge $t4, $t6, draw_rect_f_x_e 
                 sb $t4, draw_x # x parameter.
                 sb $t5, draw_y # y parameter
-                jal draw_pixel 
+                jal draw_pixel_f 
     	        addi $t4, $t4, 1 # add 1
-    	        j draw_rect_x # restart x loop.
-    	    draw_rect_x_e: # WHILE LOOP END
+    	        j draw_rect_f_x # restart x loop.
+    	    draw_rect_f_x_e: # WHILE LOOP END
     	        addi $t5, $t5, 1 # reduce y
-    	        j draw_rect_y # restart y loop.
-    	draw_rect_y_e: # WHILE LOOP END
-    	# Load previous temporaries and $ra. (FUNC FOOTER)
-            lw $t9, 0($sp)
-            addi $sp, $sp, 4
-            lw $t8, 0($sp)
-            addi $sp, $sp, 4
-            lw $t7, 0($sp)
-            addi $sp, $sp, 4
-            lw $t6, 0($sp)
-            addi $sp, $sp, 4
-            lw $t5, 0($sp)
-            addi $sp, $sp, 4
-            lw $t4, 0($sp)
-            addi $sp, $sp, 4
-            lw $t3, 0($sp)
-            addi $sp, $sp, 4
-            lw $t2, 0($sp)
-            addi $sp, $sp, 4
-            lw $t1, 0($sp)
-            addi $sp, $sp, 4
-            lw $t0, 0($sp)
-            addi $sp, $sp, 4
-            lw $ra, 0($sp)
-            addi $sp, $sp, 4
-            jr $ra # return to call position.
+    	        j draw_rect_f_y # restart y loop.
+    	draw_rect_f_y_e: # WHILE LOOP END
 
-    draw_frog:
+        # Load previous temporaries and $ra. (FUNC FOOTER)
+        lw $t9, 0($sp)
+        addi $sp, $sp, 4
+        lw $t8, 0($sp)
+        addi $sp, $sp, 4
+        lw $t7, 0($sp)
+        addi $sp, $sp, 4
+        lw $t6, 0($sp)
+        addi $sp, $sp, 4
+        lw $t5, 0($sp)
+        addi $sp, $sp, 4
+        lw $t4, 0($sp)
+        addi $sp, $sp, 4
+        lw $t3, 0($sp)
+        addi $sp, $sp, 4
+        lw $t2, 0($sp)
+        addi $sp, $sp, 4
+        lw $t1, 0($sp)
+        addi $sp, $sp, 4
+        lw $t0, 0($sp)
+        addi $sp, $sp, 4
+        lw $ra, 0($sp)
+        addi $sp, $sp, 4
+        jr $ra # return to call position.
+
+    draw_frog_sprite_f:
         # Load everything onto stack. (FUNC HEADER)
         addi $sp, $sp, -4
         sw $ra, 0($sp)
@@ -381,99 +390,93 @@
         
         lw $t9, frogColour
         sw $t9, draw_colour
-        
-        lb $t0, frogX
-        lb $t1, frogY
-        lb $t2, frogDirection
-        
-        
-        
+
         sb $t0, draw_x # top left corner
         sb $t1, draw_y
-        jal draw_pixel
+        jal draw_pixel_f
             
         addi $t9, $t0, 3 # top right corner
         sb $t9, draw_x
-        jal draw_pixel
+        jal draw_pixel_f
         
         addi $t9, $t1, 3 # bottom right corner
         sb $t9, draw_y
-        jal draw_pixel
+        jal draw_pixel_f
         
         sb $t0, draw_x # bottom left corner
-        jal draw_pixel
+        jal draw_pixel_f
         
-        beq $t2, 0, draw_frog_left
-        beq $t2, 1, draw_frog_up
-        beq $t2, 2, draw_frog_right
-        beq $t2, 3, draw_frog_down
+        beq $t2, 0, draw_frog_sprite_f_left
+        beq $t2, 1, draw_frog_sprite_f_up
+        beq $t2, 2, draw_frog_sprite_f_right
+        beq $t2, 3, draw_frog_sprite_f_down
         
-        draw_frog_left:
+        draw_frog_sprite_f_left:
             
             addi $t9, $t0, 1 # bottom left +1 to right
             sb $t9, draw_x
-            jal draw_pixel
+            jal draw_pixel_f
             
             sb $t1, draw_y # top left +1 to right
-            jal draw_pixel
+            jal draw_pixel_f
             
             addi $a0, $t0, 1 # x
             addi $a1, $t1, 1 # y
             li $a2, 3 # width
             li $a3, 2 # height
-            jal draw_rect
+            jal draw_rect_f
             
-            j draw_frog_ret
+            j draw_frog_sprite_f_ret
             
-        draw_frog_up:
+        draw_frog_sprite_f_up:
             addi $t9, $t1, 1 # top left +1 down
             sb $t9, draw_y
-            jal draw_pixel
+            jal draw_pixel_f
             
             addi $t9, $t0, 3
             sb $t9, draw_x # top right +1 down
-            jal draw_pixel
+            jal draw_pixel_f
             
             addi $a0, $t0, 1 # x
             addi $a1, $t1, 1 # y
             li $a2, 2 # width
             li $a3, 3 # height
-            jal draw_rect
+            jal draw_rect_f
             
-            j draw_frog_ret
-        draw_frog_right:
+            j draw_frog_sprite_f_ret
+        draw_frog_sprite_f_right:
             addi $t9, $t0, 2 # bottom right +1 to left
             sb $t9, draw_x
-            jal draw_pixel
+            jal draw_pixel_f
             
             sb $t1, draw_y # top right +1 to left
-            jal draw_pixel
+            jal draw_pixel_f
             
             addi $a0, $t0, 0 # x
             addi $a1, $t1, 1 # y
             li $a2, 3 # width
             li $a3, 2 # height
-            jal draw_rect
+            jal draw_rect_f
             
-            j draw_frog_ret
-        draw_frog_down:
+            j draw_frog_sprite_f_ret
+        draw_frog_sprite_f_down:
             addi $t9, $t1, 2 # bottom left +1 up
             sb $t9, draw_y
-            jal draw_pixel
+            jal draw_pixel_f
             
             addi $t9, $t0, 3
             sb $t9, draw_x # bottom right +1 up
-            jal draw_pixel
+            jal draw_pixel_f
             
             addi $a0, $t0, 1 # x
             addi $a1, $t1, 0 # y
             li $a2, 2 # width
             li $a3, 3 # height
-            jal draw_rect
+            jal draw_rect_f
             
-            j draw_frog_ret
+            j draw_frog_sprite_f_ret
         
-        draw_frog_ret: # Load previous temporaries and $ra. (FUNC FOOTER)
+        draw_frog_sprite_f_ret: # Load previous temporaries and $ra. (FUNC FOOTER)
         lw $t9, 0($sp)
         addi $sp, $sp, 4
         lw $t8, 0($sp)
