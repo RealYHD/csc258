@@ -27,8 +27,6 @@
 
 .data
     dispAddr: .word 0x10008000 # Display address set in tools > bitmap display
-    dispHeight: .byte 64 # Display height in virtual pixels origin at 0
-    dispWidth: .byte 64 # Display width in virtual pixels origin at 0
     
     
     # TODO: perhaps look into any form of constants or pre-processing? These values technically don't change. May change for future levels?
@@ -49,13 +47,14 @@
     state: .byte 0 # state tracker.
     
     # ENTITY VARIABLES
-    frogX: .byte 28 # start frog x position at 0 # byte for 127 to -128 values and display is technically 32 virtual pixels wide;
-    frogY: .byte 59 # start frog y position at 0
+    frogX: .byte 3 # start frog x position at 0 # byte for 127 to -128 values and display is technically 32 virtual pixels wide;
+    frogY: .byte 15 # start frog y position at 0
+    frogDirection: .byte 3 # start frog direction up.
     
     framebuffer: .word 0:4096 # 64 * 64
     
     # DRAW STATE
-    draw_colour: .word 0 # a pen colour for drawing.
+    draw_colour: .word 0x00ffffff # a pen colour for drawing.
     draw_x: .byte 0
     draw_y: .byte 0
 .text
@@ -92,11 +91,11 @@
    	    lb $t4, state
     	    bltz $t4, game_loop_e
     	    
-    	    li $a0, 1
-    	    li $a1, 1
-    	    li $a2, 3
-    	    li $a3, 0
-    	    jal draw_frog
+    	    li $a0, 0
+    	    li $a1, 0
+    	    li $a2, 64
+    	    li $a3, 64
+    	    jal draw_rect
     	    
     	    jal draw_frame # call draw frame
         j game_loop # jump to start of game loop.
@@ -166,13 +165,8 @@
         li $t4, 0 # t4 = 0 for initialization
         lw $t9, dispAddr # loads display address to t9
         framebuffer_loop:
-            lb $t5, dispWidth
-            lb $t6, dispHeight
-            mult $t5, $t6 # width x height of display
-            mflo $t6 # t6 = width x height of display
-            add $t5, $zero, $t6 # load upper bound to t5 (= t6 = area of display)
-            beq $t4, $t5, framebuffer_loop_e 
-            
+            add $t5, $zero, 16384 # load upper bound to t5 (= t6 = area of display)
+            bge $t4, $t5, framebuffer_loop_e 
             
             la $t5, framebuffer # address of framebuffer
             add $t5, $t5, $t4 # t5 = framebuffer address + $t4 (t4 is the current index in the buffer)
@@ -244,7 +238,7 @@
     	lb $t0, draw_x # t0 is supposed to be x pixel
     	lb $t1, draw_y # t1 is supposed to be y pixel
         lw $t2, draw_colour # load colour
-        lb $t4, dispWidth # load display width to $t4 (for use as constant) (64).
+        li $t4, 64 # load display width to $t4 (for use as constant) (64).
         la $t5, framebuffer # stores the display address at $t5
 
         
@@ -387,6 +381,12 @@
         
         lw $t9, frogColour
         sw $t9, draw_colour
+        
+        lb $t0, frogX
+        lb $t1, frogY
+        lb $t2, frogDirection
+        
+        
         
         sb $t0, draw_x # top left corner
         sb $t1, draw_y
