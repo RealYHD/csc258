@@ -92,11 +92,15 @@
    	    lb $t4, state
     	    bltz $t4, game_loop_e
     	    
-    	    sb $zero, draw_x
-    	    sb $zero draw_y
-    	    lw $t0, logColour
+    	    li $a0, 3
+    	    li $a1, 3
+    	    li $a2, 4
+    	    li $a3, 4
+    	    sb $a0, draw_x
+    	    sb $a1, draw_y
+    	    lw $t0, frogColour
     	    sw $t0, draw_colour
-    	    jal draw_pixel
+    	    jal draw_rect
     	    
     	    jal draw_frame # call draw frame
         j game_loop # jump to start of game loop.
@@ -131,7 +135,7 @@
     	lw $ra, 0($sp)
         addi $sp, $sp, 4
         jr $ra # return to call position.
-        li $v0, 10 # exits the program. WHILE LOOP END
+        li $v0, 10 # exits the program.
     
     draw_frame:
         # Draws the current framebuffer.
@@ -305,24 +309,22 @@
     	sw $t8, 0($sp)
     	addi $sp, $sp, -4
     	sw $t9, 0($sp)
-    	add $t0, $zero, $a0 # Load parameters into temporaries. width
-    	add $t1, $zero, $a1 # height
-    	add $t2, $zero, $a2 # undefined 
-    	add $t3, $zero, $a3 # undefined
+    	add $t0, $zero, $a0 # Load parameters into temporaries. x
+    	add $t1, $zero, $a1 # y
+    	add $t2, $zero, $a2 # width
+    	add $t3, $zero, $a3 # height
     	
     	# Initialize values
-    	lb $t2, draw_x # the draw position
-    	lb $t3, draw_y
-    	add $t4, $zero, $t2 # the current position
-    	add $t5, $zero, $t3
     	lb $t9, draw_colour
     	
     	# work
+    	add $t5, $zero, $t1
     	draw_rect_y: # WHILE LOOP BEGIN
     	    add $t6, $t3, $t1 # t6 = height + initial y
     	    bge $t5, $t6 draw_rect_y_e 
+    	    add $t4, $zero, $t0 # the current position
     	    draw_rect_x: # WHILE LOOP BEGIN
-    	        add $t6, $t4, $t0 # t6 = width + initial x
+    	        add $t6, $t2, $t0 # t6 = width + initial x
     	        bge $t4, $t6, draw_rect_x_e 
                 sb $t4, draw_x # x parameter.
                 sb $t5, draw_y # y parameter
@@ -357,3 +359,59 @@
             lw $ra, 0($sp)
             addi $sp, $sp, 4
             jr $ra # return to call position.
+
+    draw_frog:
+        # Load everything onto stack. (FUNC HEADER)
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)
+        addi $sp, $sp, -4
+        sw $t1, 0($sp)
+        addi $sp, $sp, -4
+        sw $t2, 0($sp)
+        addi $sp, $sp, -4
+        sw $t3, 0($sp)
+        addi $sp, $sp, -4
+        sw $t4, 0($sp)
+        addi $sp, $sp, -4
+        sw $t5, 0($sp)
+        addi $sp, $sp, -4
+        sw $t6, 0($sp)
+        addi $sp, $sp, -4
+        sw $t7, 0($sp)
+        addi $sp, $sp, -4
+        sw $t8, 0($sp)
+        addi $sp, $sp, -4
+        sw $t9, 0($sp)
+        add $t0, $zero, $a0 # Load parameters into temporaries.
+        add $t1, $zero, $a1
+        add $t2, $zero, $a2
+        add $t3, $zero, $a3
+        
+        
+        
+                # Load previous temporaries and $ra. (FUNC FOOTER)
+        lw $t9, 0($sp)
+        addi $sp, $sp, 4
+        lw $t8, 0($sp)
+        addi $sp, $sp, 4
+        lw $t7, 0($sp)
+        addi $sp, $sp, 4
+        lw $t6, 0($sp)
+        addi $sp, $sp, 4
+        lw $t5, 0($sp)
+        addi $sp, $sp, 4
+        lw $t4, 0($sp)
+        addi $sp, $sp, 4
+        lw $t3, 0($sp)
+        addi $sp, $sp, 4
+        lw $t2, 0($sp)
+        addi $sp, $sp, 4
+        lw $t1, 0($sp)
+        addi $sp, $sp, 4
+        lw $t0, 0($sp)
+        addi $sp, $sp, 4
+        lw $ra, 0($sp)
+        addi $sp, $sp, 4
+        jr $ra # return to call position.
