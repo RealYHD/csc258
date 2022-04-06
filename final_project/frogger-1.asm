@@ -52,155 +52,163 @@
     frogX: .byte 28 # start frog x position at 0 # byte for 127 to -128 values and display is technically 32 virtual pixels wide;
     frogY: .byte 59 # start frog y position at 0
     
+    framebuffer: .word 0:4096 # 64 * 64
+    
     # DRAW STATE
-    colour: .word 0 # a pen colour for drawing.
+    draw_colour: .word 0 # a pen colour for drawing.
+    draw_x: .byte 0
+    draw_y: .byte 0
 .text
     main:
-        j game_loop # jump to start of game loop. # only for convention purposes.
-    
-    game_loop:
-        lb $t0, state # load state into $t0.
-        addi $t1, $zero, -1 # load -1 to $t1.
-        beq $t0, $t1, game_loop_e # exit the program if state is -1, otherwise, loop. WHILE LOOP BEGIN
-    
-        # TODO: keyboard input
-        # TODO: entity updates
-    
-        # Draw background
-        lw $t0, dispAddr # stores the display address at $t0
-
-        lb $t8, dispWidth # load display width to $t8 (for use as constant) (128).
-        addi $t9, $zero, 1 # load 1 to $t9
-        addi $t7, $zero, 4 # load 4 to $t7
+        # Load everything onto stack. (FUNC HEADER)
+    	addi $sp, $sp, -4
+    	sw $ra, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t0, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t1, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t2, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t3, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t4, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t5, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t6, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t7, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t8, 0($sp)
+    	addi $sp, $sp, -4
+    	sw $t9, 0($sp)
+    	add $t0, $zero, $a0 # Load parameters into temporaries.
+    	add $t1, $zero, $a1
+    	add $t2, $zero, $a2
+    	add $t3, $zero, $a3
+    	
+    	game_loop:
+   	    lb $t4, state
+    	    bltz $t4, game_loop_e
+    	    
+    	    sb $zero, draw_x
+    	    sb $zero draw_y
+    	    lw $t0, logColour
+    	    sw $t0, draw_colour
+    	    jal draw_pixel
+    	    
+    	    jal draw_frame # call draw frame
+        j game_loop # jump to start of game loop.
         
-        lb $t2, dispHeight # load display height to $t1.
-        sub $t2, $t2, $t9 # $t2=$t2-1 (127)
         
-        lw $t4, landColour # set initial colour to land.
-        bg_loop_y: 
-            bltz $t2, bg_loop_y_e # exits y loop if $t2 is less than 0; WHILE LOOP BEGIN
-            add $t1, $t8, $zero # load display width to $t1 from register
-            sub $t1, $t1, $t9 # $t1=$t1-1 (127)
-            
-            addi $t5, $zero, 51 # load 51
-            beq $t5, $t2, road # Change colour to road colour if at 51th pixel row 
-            addi $t5, $zero, 35 # load 35
-            beq $t5, $t2, land # Change colour to land colour if at 35th pixel row 
-            addi $t5, $zero, 31 # load 31
-            beq $t5, $t2, river # Change colour to river colour if at 31th pixel row 
-            addi $t5, $zero, 11 # load 11
-            beq $t5, $t2, land # Change colour to land colour if at 11th pixel row
-            
-            j bg_loop_x # otherwise, jump to looping, preserve previous colour.
-            
-            road: 
-                lw $t4, roadColour # load road colour
-                j bg_loop_x # exit
-            river: 
-                lw $t4, riverColour # load river colour
-                j bg_loop_x # exit
-            land: 
-                lw $t4, landColour # load land colour
-                j bg_loop_x # exit
-                
-            bg_loop_x:
-                sw $t4, colour 
-                bltz $t1, bg_loop_x_e # exits x loop if $t1 is less than 0; WHILE LOOP BEGIN
-                add $a0, $zero, $t1 # x parameter.
-                add $a1, $zero, $t2 # y parameter
-                jal draw_pixel 
-                
-                sub $t1, $t1, $t9 # subtract 1 from current width;
-                j bg_loop_x # jump back to loop start.
-            bg_loop_x_e: 
-                sub $t2, $t2, $t9 # subtract 1 from current height; starts from bottom. # WHILE LOOP END
-                j bg_loop_y # jump back to loop start.
-        bg_loop_y_e:
-            
-            # Draw frog
-            lb $t1, frogX # load frog x
-            lb $t2, frogY # load frog y
-            lw $t4, frogColour # load frog colour
-            sw $t4, colour # set colour.
-            
-            add $a0, $zero, $t1 # set parameter x to frog x.
-            add $a1, $zero, $t2 # set parameter y to frog y.
-            addi $a2, $zero, 4 # set paramter width to 4.
-            addi $a3, $zero, 4 # set paramter height to 4.
-            jal draw_rect
-            
-            # Draw vehicle 1 and 2 row 1
-            lw $t4, vehicleColour # load vehicle colour
-            sw $t4, colour # set colour.
-            
-            addi $a0, $zero, 1 # set parameter x to log x.
-            addi $a1, $zero, 45 # set parameter y to y y.
-            addi $a2, $zero, 6 # set paramter width to 6.
-            addi $a3, $zero, 3 # set paramter height to 3.
-            jal draw_rect
-            
-            addi $a0, $zero, 24 # set parameter x to log x.
-            addi $a1, $zero, 45 # set parameter y to y y.
-            addi $a2, $zero, 6 # set paramter width to 6.
-            addi $a3, $zero, 3 # set paramter height to 3.
-            jal draw_rect
+    
 
-            # Draw vehicle 1 and 2 row 2
-            lw $t4, vehicleColour # load vehicle colour
-            sw $t4, colour # set colour.
-            
-            addi $a0, $zero, 8 # set parameter x
-            addi $a1, $zero, 39 # set parameter y
-            addi $a2, $zero, 6 # set paramter width
-            addi $a3, $zero, 3 # set paramter height
-            jal draw_rect
-            
-            addi $a0, $zero, 31 # set parameter x
-            addi $a1, $zero, 39 # set parameter y
-            addi $a2, $zero, 6 # set paramter width
-            addi $a3, $zero, 3 # set paramter height
-            jal draw_rect
-            
-            # Draw log 1 and log 2 row 1
-            lw $t4, logColour # load vehicle colour
-            sw $t4, colour # set colour.
-            
-            addi $a0, $zero, 10 # set parameter x
-            addi $a1, $zero, 14 # set parameter y
-            addi $a2, $zero, 8 # set paramter width
-            addi $a3, $zero, 2 # set paramter height
-            jal draw_rect
-            
-            addi $a0, $zero, 32 # set parameter x
-            addi $a1, $zero, 14 # set parameter y
-            addi $a2, $zero, 8 # set paramter width
-            addi $a3, $zero, 2 # set paramter height
-            jal draw_rect
-            
-            # Draw log 1 and log 2 row 2
-            lw $t4, logColour # load vehicle colour
-            sw $t4, colour # set colour.
-            
-            addi $a0, $zero, 20 # set parameter x
-            addi $a1, $zero, 18 # set parameter y
-            addi $a2, $zero, 8 # set paramter width
-            addi $a3, $zero, 2 # set paramter height
-            jal draw_rect
-            
-            addi $a0, $zero, 42 # set parameter x
-            addi $a1, $zero, 18 # set parameter y
-            addi $a2, $zero, 8 # set paramter width
-            addi $a3, $zero, 2 # set paramter height
-            jal draw_rect
-            
-            # Sleep, refresh 60hz
-            li $v0, 32
-            li $a0, 10
-            syscall
-            
-            j game_loop # restarts the game loop. # WHILE LOOP END
-    game_loop_e: 
+    	
+
+    game_loop_e:
+        # Load previous temporaries and $ra. (FUNC FOOTER)
+    	lw $t9, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t8, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t7, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t6, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t5, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t4, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t3, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t2, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t1, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $t0, 0($sp)
+    	addi $sp, $sp, 4
+    	lw $ra, 0($sp)
+        addi $sp, $sp, 4
+        jr $ra # return to call position.
         li $v0, 10 # exits the program. WHILE LOOP END
+    
+    draw_frame:
+        # Draws the current framebuffer.
+        # Load everything onto stack. (FUNC HEADER)
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)
+        addi $sp, $sp, -4
+        sw $t1, 0($sp)
+        addi $sp, $sp, -4
+        sw $t2, 0($sp)
+        addi $sp, $sp, -4
+        sw $t3, 0($sp)
+        addi $sp, $sp, -4
+        sw $t4, 0($sp)
+        addi $sp, $sp, -4
+        sw $t5, 0($sp)
+        addi $sp, $sp, -4
+        sw $t6, 0($sp)
+        addi $sp, $sp, -4
+        sw $t7, 0($sp)
+        addi $sp, $sp, -4
+        sw $t8, 0($sp)
+        addi $sp, $sp, -4
+        sw $t9, 0($sp)
+        add $t0, $zero, $a0 # Load parameters into temporaries.
+        add $t1, $zero, $a1
+        add $t2, $zero, $a2
+        add $t3, $zero, $a3
+        
+        li $t4, 0 # t4 = 0 for initialization
+        lw $t9, dispAddr # loads display address to t9
+        framebuffer_loop:
+            lb $t5, dispWidth
+            lb $t6, dispHeight
+            mult $t5, $t6 # width x height of display
+            mflo $t6 # t6 = width x height of display
+            add $t5, $zero, $t6 # load upper bound to t5 (= t6 = area of display)
+            beq $t4, $t5, framebuffer_loop_e 
+            
+            
+            la $t5, framebuffer # address of framebuffer
+            add $t5, $t5, $t4 # t5 = framebuffer address + $t4 (t4 is the current index in the buffer)
+            lw $t5, 0($t5) # load colour at t5
+            add $t6, $t4, $t9 # t6 = $t4 + dispAddr
+            sw $t5, 0($t6)
+            addi $t4, $t4, 4  # $t4 = $t4 + 1
+            j framebuffer_loop
+        
+        framebuffer_loop_e:
+        # Load previous temporaries and $ra. (FUNC FOOTER)
+        lw $t9, 0($sp)
+        addi $sp, $sp, 4
+        lw $t8, 0($sp)
+        addi $sp, $sp, 4
+        lw $t7, 0($sp)
+        addi $sp, $sp, 4
+        lw $t6, 0($sp)
+        addi $sp, $sp, 4
+        lw $t5, 0($sp)
+        addi $sp, $sp, 4
+        lw $t4, 0($sp)
+        addi $sp, $sp, 4
+        lw $t3, 0($sp)
+        addi $sp, $sp, 4
+        lw $t2, 0($sp)
+        addi $sp, $sp, 4
+        lw $t1, 0($sp)
+        addi $sp, $sp, 4
+        lw $t0, 0($sp)
+        addi $sp, $sp, 4
+        lw $ra, 0($sp)
+        addi $sp, $sp, 4
+        jr $ra # return to call position.
+        li $v0, 10 # exits the program. WHILE LOOP END
+            
     
     # functions
     draw_pixel:  # $a0 = x, $a1 = y
@@ -233,19 +241,20 @@
     	add $t3, $zero, $a3
     	
     	# Initialize values
-        addi $t4, $zero, 4 # set $t4 = 4
-        lb $t5, dispWidth # load display width to $t8 (for use as constant) (128).
-        lw $t6, dispAddr # stores the display address at $t0
-        lw $t8, colour # load colour
+    	lb $t0, draw_x # t0 is supposed to be x pixel
+    	lb $t1, draw_y # t1 is supposed to be y pixel
+        lw $t2, draw_colour # load colour
+        lb $t4, dispWidth # load display width to $t4 (for use as constant) (64).
+        la $t5, framebuffer # stores the display address at $t5
+
         
-        mult $t1, $t5 # (y * width)
-        mflo $t7 # store (y * width) in $t3
-        add $t7, $t7, $t0 # $t3 = (y * width) + x; $t3 should now store current offset for pixel.
-        mult $t7, $t4 # lo = 4((y * width) + x) to account for pixel depth.
-        mflo $t7 # t3 = 4((y * width) + x)
-        add $t7, $t7, $t6 # t3 = t3 + dispAddr; t3 is now the memory location for the current pixel.
+        mult $t1, $t4 # (y * width)
+        mflo $t6 # store (y * width) in $t3
+        add $t6, $t6, $t0 # $t6 = (y * width) + x; $t6 should now store current offset for pixel.
+        sll $t6, $t6, 2 # t6 = 4((y * width) + x) to account for pixel depth.
+        add $t6, $t6, $t5 # t6 = t6 + framebuffer address; t6 is now the memory location for the current pixel.
         
-        sw $t8, 0($t7)
+        sw $t2, 0($t6)
         
         # Load previous temporaries and $ra. (FUNC FOOTER)
     	lw $t9, 0($sp)
@@ -272,7 +281,7 @@
         addi $sp, $sp, 4
         jr $ra # return to call position.
     
-    draw_rect: # $a0 = x $a1 = y $a2 = width $a3 = height
+    draw_rect: # $a0 = width $a1 = height
         # Load everything onto stack. (FUNC HEADER)
     	addi $sp, $sp, -4
     	sw $ra, 0($sp)
@@ -296,28 +305,32 @@
     	sw $t8, 0($sp)
     	addi $sp, $sp, -4
     	sw $t9, 0($sp)
-    	add $t0, $zero, $a0 # Load parameters into temporaries.
-    	add $t1, $zero, $a1
-    	add $t2, $zero, $a2
-    	add $t3, $zero, $a3
+    	add $t0, $zero, $a0 # Load parameters into temporaries. width
+    	add $t1, $zero, $a1 # height
+    	add $t2, $zero, $a2 # undefined 
+    	add $t3, $zero, $a3 # undefined
     	
     	# Initialize values
-    	addi $t4, $zero, 1 # initialize 1 value.
-    	add $t5, $t1, $t3 # $t5 = current y position
+    	lb $t2, draw_x # the draw position
+    	lb $t3, draw_y
+    	add $t4, $zero, $t2 # the current position
+    	add $t5, $zero, $t3
+    	lb $t9, draw_colour
     	
     	# work
     	draw_rect_y: # WHILE LOOP BEGIN
-    	    blt $t5, $t1 draw_rect_y_e 
-    	    add $t6, $t0, $t2 # $t6 = current x position
+    	    add $t6, $t3, $t1 # t6 = height + initial y
+    	    bge $t5, $t6 draw_rect_y_e 
     	    draw_rect_x: # WHILE LOOP BEGIN
-    	        blt $t6, $t0, draw_rect_x_e 
-                add $a0, $zero, $t6 # x parameter.
-                add $a1, $zero, $t5 # y parameter
+    	        add $t6, $t4, $t0 # t6 = width + initial x
+    	        bge $t4, $t6, draw_rect_x_e 
+                sb $t4, draw_x # x parameter.
+                sb $t5, draw_y # y parameter
                 jal draw_pixel 
-    	        sub $t6, $t6, $t4 # reduce y
+    	        addi $t4, $t4, 1 # add 1
     	        j draw_rect_x # restart x loop.
     	    draw_rect_x_e: # WHILE LOOP END
-    	        sub $t5, $t5, $t4 # reduce y
+    	        addi $t5, $t5, 1 # reduce y
     	        j draw_rect_y # restart y loop.
     	draw_rect_y_e: # WHILE LOOP END
     	# Load previous temporaries and $ra. (FUNC FOOTER)
@@ -344,4 +357,3 @@
             lw $ra, 0($sp)
             addi $sp, $sp, 4
             jr $ra # return to call position.
-        
