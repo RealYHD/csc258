@@ -26,9 +26,6 @@
 #####################################################################
 
 .data
-    dispAddr: .word 0x10008000 # Display address set in tools > bitmap display
-    
-    
     # TODO: perhaps look into any form of constants or pre-processing? These values technically don't change. May change for future levels?
     # GAME ENV. VARIABLES
     frogColour: .word 0x0042f557 # variable for the colour of the frog; light green # first 4 bytes ignored? starts interpretting from right?
@@ -47,9 +44,9 @@
     state: .byte 0 # state tracker.
     
     # ENTITY VARIABLES
-    frogX: .byte 3 # start frog x position at 0 # byte for 127 to -128 values and display is technically 32 virtual pixels wide;
+    frogX: .byte 7 # start frog x position at 0 # byte for 127 to -128 values and display is technically 32 virtual pixels wide;
     frogY: .byte 15 # start frog y position at 0
-    frogDirection: .byte 3 # start frog direction up.
+    frogDirection: .byte 1 # start frog direction up.
     
     framebuffer: .word 0:4096 # 64 * 64
     
@@ -58,88 +55,196 @@
     draw_x: .byte 0
     draw_y: .byte 0
 .text
-    main: # MAIN FUNCTION
-        # Load everything onto stack. (FUNC HEADER)
-    	addi $sp, $sp, -4
-    	sw $ra, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t0, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t1, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t2, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t3, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t4, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t5, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t6, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t7, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t8, 0($sp)
-    	addi $sp, $sp, -4
-    	sw $t9, 0($sp)
-    	add $t0, $zero, $a0 # Load parameters into temporaries.
-    	add $t1, $zero, $a1
-    	add $t2, $zero, $a2
-    	add $t3, $zero, $a3
-    	
+    main:
     	game_loop:
    	    lb $t4, state
     	    bltz $t4, game_loop_e
     	    
-    	    li $a0, 0
-    	    li $a1, 0
-    	    li $a2, 64
-    	    li $a3, 64
-    	    li $t0, 0x00ffffff
-    	    sw $t0, draw_colour
-    	    jal draw_rect_f
-    	    
-    	    li $a0, 3
-    	    li $a1, 3
-    	    li $a2, 1
-    	    li $a3, 0
-    	    jal draw_frog_sprite_f
-    	    
+    	    jal update_f
+    	    jal render_f
+
     	    jal draw_frame_f # call draw frame
         j game_loop # jump to start of game loop.
         
-        
-    
-
-    	
-
-    game_loop_e:
-        # Load previous temporaries and $ra. (FUNC FOOTER)
-    	lw $t9, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t8, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t7, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t6, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t5, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t4, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t3, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t2, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t1, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $t0, 0($sp)
-    	addi $sp, $sp, 4
-    	lw $ra, 0($sp)
-        addi $sp, $sp, 4
-        jr $ra # return to call position.
+        game_loop_e:
+        main_ret:
         li $v0, 10 # exits the program.
     
+    update_f:
+        # Load everything onto stack. (FUNC HEADER)
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)
+        addi $sp, $sp, -4
+        sw $t1, 0($sp)
+        addi $sp, $sp, -4
+        sw $t2, 0($sp)
+        addi $sp, $sp, -4
+        sw $t3, 0($sp)
+        addi $sp, $sp, -4
+        sw $t4, 0($sp)
+        addi $sp, $sp, -4
+        sw $t5, 0($sp)
+        addi $sp, $sp, -4
+        sw $t6, 0($sp)
+        addi $sp, $sp, -4
+        sw $t7, 0($sp)
+        addi $sp, $sp, -4
+        sw $t8, 0($sp)
+        addi $sp, $sp, -4
+        sw $t9, 0($sp)
+        add $t0, $zero, $a0 # undefined
+        add $t1, $zero, $a1 # undefined
+        add $t2, $zero, $a2 # undefined
+        add $t3, $zero, $a3 # undefined
+        
+        
+        # keyboard input
+        lw $t0, 0xffff0000 # pressed
+        lw $t1, 0xffff0004 # value
+        bnez $t0, update_f_key_input
+        j update_f_ret
+        
+        update_f_key_input:
+            lb $t2, frogX
+            lb $t3, frogY
+            lb $t4, frogDirection
+            li $t5, 64
+            
+            beq $t1, 0x00000077, update_f_key_input_w
+            beq $t1, 0x00000061, update_f_key_input_a
+            beq $t1, 0x00000073, update_f_key_input_s
+            beq $t1, 0x00000064, update_f_key_input_d
+            j update_f_key_input_end
+            
+            update_f_key_input_w:
+                blt $t3, $zero, update_f_key_input_end
+                addi $t3, $t3, -1
+                addi $t4, $zero, 1
+                j update_f_key_input_done
+            update_f_key_input_a:
+                blt $t2, $zero, update_f_key_input_end
+                addi $t2, $t2, -1
+                addi $t4, $zero, 0
+                j update_f_key_input_done
+            update_f_key_input_s:
+                bge $t3, $t5, update_f_key_input_end
+                addi $t3, $t3, 1
+                addi $t4, $zero, 3
+                j update_f_key_input_done
+            update_f_key_input_d:
+                bge $t2, $t5, update_f_key_input_end
+                addi $t2, $t2, 1
+                addi $t4, $zero, 2
+                j update_f_key_input_done
+            j update_f_key_input_end
+            update_f_key_input_done:
+                sb $t2, frogX
+                sb $t3, frogY
+                sb $t4, frogDirection
+        update_f_key_input_end:
+
+        
+        update_f_ret:
+        # Load previous temporaries and $ra. (FUNC FOOTER)
+        lw $t9, 0($sp)
+        addi $sp, $sp, 4
+        lw $t8, 0($sp)
+        addi $sp, $sp, 4
+        lw $t7, 0($sp)
+        addi $sp, $sp, 4
+        lw $t6, 0($sp)
+        addi $sp, $sp, 4
+        lw $t5, 0($sp)
+        addi $sp, $sp, 4
+        lw $t4, 0($sp)
+        addi $sp, $sp, 4
+        lw $t3, 0($sp)
+        addi $sp, $sp, 4
+        lw $t2, 0($sp)
+        addi $sp, $sp, 4
+        lw $t1, 0($sp)
+        addi $sp, $sp, 4
+        lw $t0, 0($sp)
+        addi $sp, $sp, 4
+        lw $ra, 0($sp)
+        addi $sp, $sp, 4
+        jr $ra # return to call position.
+
+    render_f:
+        # Load everything onto stack. (FUNC HEADER)
+        addi $sp, $sp, -4
+        sw $ra, 0($sp)
+        addi $sp, $sp, -4
+        sw $t0, 0($sp)
+        addi $sp, $sp, -4
+        sw $t1, 0($sp)
+        addi $sp, $sp, -4
+        sw $t2, 0($sp)
+        addi $sp, $sp, -4
+        sw $t3, 0($sp)
+        addi $sp, $sp, -4
+        sw $t4, 0($sp)
+        addi $sp, $sp, -4
+        sw $t5, 0($sp)
+        addi $sp, $sp, -4
+        sw $t6, 0($sp)
+        addi $sp, $sp, -4
+        sw $t7, 0($sp)
+        addi $sp, $sp, -4
+        sw $t8, 0($sp)
+        addi $sp, $sp, -4
+        sw $t9, 0($sp)
+        add $t0, $zero, $a0 # undefined
+        add $t1, $zero, $a1 # undefined
+        add $t2, $zero, $a2 # undefined
+        add $t3, $zero, $a3 # undefined
+        
+        
+        # draw background colour
+        lw $t0, landColour    	    
+        li $a0, 0
+    	li $a1, 0
+        li $a2, 64
+    	li $a3, 64
+        sw $t0, draw_colour
+    	jal draw_rect_f
+        
+        # draw the frog with entity data
+        lb $a0, frogX
+        sll $a0, $a0, 2 # x4 to convert from world unit to pixels.
+        lb $a1, frogY
+        sll $a1, $a1, 2 # x4 to convert from world unit to pixels.
+        lb $a2, frogDirection
+        jal draw_frog_sprite_f
+        
+        render_f_ret:
+        # Load previous temporaries and $ra. (FUNC FOOTER)
+        lw $t9, 0($sp)
+        addi $sp, $sp, 4
+        lw $t8, 0($sp)
+        addi $sp, $sp, 4
+        lw $t7, 0($sp)
+        addi $sp, $sp, 4
+        lw $t6, 0($sp)
+        addi $sp, $sp, 4
+        lw $t5, 0($sp)
+        addi $sp, $sp, 4
+        lw $t4, 0($sp)
+        addi $sp, $sp, 4
+        lw $t3, 0($sp)
+        addi $sp, $sp, 4
+        lw $t2, 0($sp)
+        addi $sp, $sp, 4
+        lw $t1, 0($sp)
+        addi $sp, $sp, 4
+        lw $t0, 0($sp)
+        addi $sp, $sp, 4
+        lw $ra, 0($sp)
+        addi $sp, $sp, 4
+        jr $ra # return to call position.
+
     draw_frame_f:
         # Draws the current framebuffer.
         # Load everything onto stack. (FUNC HEADER)
@@ -171,7 +276,7 @@
         add $t3, $zero, $a3
         
         li $t4, 0 # t4 = 0 for initialization
-        lw $t9, dispAddr # loads display address to t9
+        li $t9, 0x10008000 # loads display address to t9
         framebuffer_loop:
             add $t5, $zero, 16384 # load upper bound to t5 (= t6 = area of display)
             bge $t4, $t5, framebuffer_loop_e 
@@ -179,7 +284,7 @@
             la $t5, framebuffer # address of framebuffer
             add $t5, $t5, $t4 # t5 = framebuffer address + $t4 (t4 is the current index in the buffer)
             lw $t5, 0($t5) # load colour at t5
-            add $t6, $t4, $t9 # t6 = $t4 + dispAddr
+            add $t6, $t4, $t9 # t6 = $t4 + framebuffer
             sw $t5, 0($t6)
             addi $t4, $t4, 4  # $t4 = $t4 + 1
             j framebuffer_loop
