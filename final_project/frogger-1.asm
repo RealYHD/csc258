@@ -177,42 +177,67 @@
         
         la $t9, carLocations
         li $t8, -1 # direction
+        li $t7, 0 # whether or not this row has spawned anything this cycle.
         
         
         li $t0, 0 # the index if the cars
         li $t1, 0
-        update_cars_f_car_loop:
+        update_cars_f_loop:
             li $t2, 48 # iterate over all 48 car slots
-            bge $t0, $t2, update_cars_f_car_loop_done
+            bge $t0, $t2, update_cars_f_loop_done
         
             add $t2, $t0, $t9 # = memory location of current car
             lb $t3, 0($t2) # = value of current car
-            beq $t3, -1, update_cars_f_car_loop_next # don't update if disabled.
+            beq $t3, -1, update_cars_f_loop_next # don't update if disabled.
             add $t3, $t3, $t8 # ++ direction
             sb $t3 0($t2)
 
-            update_cars_f_car_loop_next:
+            update_cars_f_loop_next:
             addi $t1, $t1, 1 # t1++
-            beq $t1, 16, update_cars_f_car_loop_row # if this is the 16th, then it's a new row.
-            j update_cars_f_car_loop_row_done
-            update_cars_f_car_loop_row:
+            beq $t1, 16, update_cars_f_loop_row # if this is the 16th, then it's a new row.
+            j update_cars_f_loop_row_done
+            update_cars_f_loop_row:
                 li $t1, 0 # reset the row counter.
                 li $t2, -1 # flip the direction for the next row.
                 mult $t8, $t2 # ...
                 mflo $t8 # ...
-            update_cars_f_car_loop_row_done:
+            update_cars_f_loop_row_done:
             
-            bge $t3, 16, update_cars_f_car_loop_kill # kill if position is >= 16
-            bltz $t3, update_cars_f_car_loop_kill # kill if position is < 0
-            j update_cars_f_car_loop_kill_done
-            update_cars_f_car_loop_kill:
+            bge $t3, 16, update_cars_f_loop_kill # kill if position is >= 16
+            bltz $t3, update_cars_f_loop_kill # kill if position is < 0
+            j update_cars_f_loop_kill_done
+            update_cars_f_loop_kill:
                 add $t2, $t0, $t9 # = memory location of current car
                 li $t3, -1 # kill value
                 sb $t3, 0($t2) # = value of current car
-            update_cars_f_car_loop_kill_done:
-                addi $t0, $t0, 1
-                j update_cars_f_car_loop
-        update_cars_f_car_loop_done:
+            update_cars_f_loop_kill_done:
+            
+            j update_cars_f_loop_spawn_done
+            update_cars_f_loop_spawn:
+                # position will be -1, set to 0 or 15 depending on direction
+                
+                update_cars_f_loop_spawn_rand:
+                    # 1. test if spawn
+                    # 2. if spawn, how long is it?
+                update_cars_f_loop_spawn_rand_done:
+            update_cars_f_loop_spawn_done:
+            
+            j update_cars_f_loop_spawn_right_done
+            update_cars_f_loop_spawn_right:
+                add $t2, $t0, $t9 # = memory location of current car
+                li $t3, 0 # = new value of current car
+                sb $t3, 0($t2) # save the new value.
+            update_cars_f_loop_spawn_right_done:
+            
+            j update_cars_f_loop_spawn_left_done
+            update_cars_f_loop_spawn_left:
+                add $t2, $t0, $t9 # = memory location of current car
+                li $t3, 15 # = new value of current car
+                sb $t3, 0($t2) # save the new value.
+            update_cars_f_loop_spawn_left_done:
+            addi $t0, $t0, 1
+            j update_cars_f_loop
+        update_cars_f_loop_done:
         # Load previous temporaries and $ra. (FUNC FOOTER)
         lw $t9, 0($sp)
         addi $sp, $sp, 4
